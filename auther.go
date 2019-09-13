@@ -68,20 +68,22 @@ func (a *auther) setRequestTokenAuthHeader(req *http.Request) error {
 		return err
 	}
 
-	oauthParams[oauthCallbackParam] = a.config.CallbackURL
-	if bodyHash, ok := params[oauthBodyHash]; ok {
-		oauthParams[oauthBodyHash] = bodyHash
-	}
-
 	signatureBase := signatureBase(req, params)
 	signature, err := a.signer().Sign("", signatureBase)
 	if err != nil {
 		return err
 	}
+
 	oauthParams[oauthSignatureParam] = signature
+	oauthParams[oauthCallbackParam] = a.config.CallbackURL
+	if bodyHash, ok := params[oauthBodyHash]; ok {
+		oauthParams[oauthBodyHash] = bodyHash
+	}
+
 	if a.config.Realm != "" {
 		oauthParams[realmParam] = a.config.Realm
 	}
+
 	req.Header.Set(authorizationHeaderParam, authHeaderValue(oauthParams))
 	return nil
 }
@@ -96,12 +98,6 @@ func (a *auther) setAccessTokenAuthHeader(req *http.Request, requestToken, reque
 		return err
 	}
 
-	oauthParams[oauthTokenParam] = requestToken
-	oauthParams[oauthVerifierParam] = verifier
-	if bodyHash, ok := params[oauthBodyHash]; ok {
-		oauthParams[oauthBodyHash] = bodyHash
-	}
-
 	signatureBase := signatureBase(req, params)
 	signature, err := a.signer().Sign(requestSecret, signatureBase)
 	if err != nil {
@@ -109,6 +105,12 @@ func (a *auther) setAccessTokenAuthHeader(req *http.Request, requestToken, reque
 	}
 
 	oauthParams[oauthSignatureParam] = signature
+	oauthParams[oauthTokenParam] = requestToken
+	oauthParams[oauthVerifierParam] = verifier
+	if bodyHash, ok := params[oauthBodyHash]; ok {
+		oauthParams[oauthBodyHash] = bodyHash
+	}
+
 	req.Header.Set(authorizationHeaderParam, authHeaderValue(oauthParams))
 	return nil
 }
@@ -202,9 +204,14 @@ func authHeaderValue(oauthParams map[string]string) string {
 // RFC5849 3.6 and RFC3986 2.1 and returns a new map.
 func encodeParameters(params map[string]string) map[string]string {
 	encoded := map[string]string{}
+
+	fmt.Println("***********************")
 	for key, value := range params {
+		fmt.Println(key, value)
 		encoded[PercentEncode(key)] = PercentEncode(value)
 	}
+	fmt.Println("***********************")
+
 	return encoded
 }
 
@@ -272,6 +279,10 @@ func collectParameters(req *http.Request, oauthParams map[string]string) (map[st
 			params[key] = value
 		}
 	}
+
+	fmt.Println("========================")
+	fmt.Println(params)
+	fmt.Println("========================")
 	return params, nil
 }
 
